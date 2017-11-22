@@ -109,8 +109,9 @@ void rrtTree::visualizeTree(){
 	}
     }
     cv::namedWindow("Mapping");
-    cv::Rect imgROI((int)Res*200,(int)Res*200,(int)Res*400,(int)Res*400);
-    cv::imshow("Mapping", imgResult(imgROI));
+   // cv::Rect imgROI((int)Res*200,(int)Res*200,(int)Res*400,(int)Res*400);
+    //cv::imshow("Mapping", imgResult(imgROI));
+    cv::imshow("Mapping", imgResult);
     cv::waitKey(1);
 }
 
@@ -164,8 +165,9 @@ void rrtTree::visualizeTree(std::vector<traj> path){
 	}
     }
     cv::namedWindow("Mapping");
-    cv::Rect imgROI((int)Res*200,(int)Res*200,(int)Res*400,(int)Res*400);
-    cv::imshow("Mapping", imgResult(imgROI));
+    //cv::Rect imgROI((int)Res*200,(int)Res*200,(int)Res*400,(int)Res*400);
+    //cv::imshow("Mapping", imgResult(imgROI));
+    cv::imshow("Mapping", imgResult);
     cv::waitKey(1);
 }
 
@@ -196,21 +198,14 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
     int loop = 0;
     int goalReached = false;
 
-    mapSize = x_max - x_min;
+    mapSize = fmin(x_max - x_min, y_max - y_min);
 
     // DEBUG
-    // visualizeTree();
-
-    //std::cout << "Collision (YES) ?" << isCollision(x_init, x_goal, 1.0, 1.0) << std::endl;
-    //point pp;
-    //pp.x = x_init.x + 0.1;
-    //pp.y = x_init.y + 0.1;
-    //pp.th = x_init.th;
-    //std::cout << "Collision (NO) ?" << isCollision(x_init, pp, 1.0, 1.0) << std::endl;
-
+    //visualizeTree();
     //std::cout << "Pause : First print of the tree with only root" << std::endl;
     //std::cin.get();
 
+    //while(loop < K || !goalReached)
     while(loop < K && !goalReached)
     {
         // DEBUG
@@ -223,8 +218,6 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
         //std::cout << "generateRRT >> Random state generated" << std::endl;
 
         // Get the nearest neighbor
-        //int nearIndex = nearestNeighbor(randPoint, MaxStep);
-        //int nearIndex = nearestNeighbor(randPoint);
         int nearIndex = nearestNeighbor2(randPoint, MaxStep);
 
         // DEBUG
@@ -244,7 +237,6 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
 
         // DEBUG
         //std::cout << "Index nearest :" << nearIndex << std::endl;
-
 
         // The new state is valid ! Create a vertex
         point *newPoint = new point();
@@ -279,7 +271,6 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
 
         // DEBUG
         //visualizeTree();
-
         //std::cout << "Pause" << std::endl;
         //std::cin.get();
     }
@@ -313,12 +304,15 @@ point rrtTree::randomState(double x_max, double x_min, double y_max, double y_mi
     {
         // Generate random coordinate within the range asked
         float randX = x_min + (static_cast<float>(rand()) / (static_cast<float>(RAND_MAX/(x_max-x_min))));
-        float randY = y_min + (static_cast<float>(rand()) / (static_cast<float>(RAND_MAX/(y_max-x_min))));
+        float randY = y_min + (static_cast<float>(rand()) / (static_cast<float>(RAND_MAX/(y_max-y_min))));
 
         // Add it to a point
         randomPoint.x = randX;
         randomPoint.y = randY;
         randomPoint.th = 0.0;    // shouldn't be used, but we initialise it still.
+
+        //DEBUG
+        //std::cout << "infinite loop ?" << std::endl;
     }while(isCollision(randomPoint, randomPoint, 0.0, 1.0));
     // Keep generating until we got a valid point
     // We don't care of alpha and d since start and endpoint are the same
@@ -328,24 +322,6 @@ point rrtTree::randomState(double x_max, double x_min, double y_max, double y_mi
 
 int rrtTree::nearestNeighbor(point x_rand, double MaxStep) {
     //TODO
-/*
-    int idx = nearestNeighbor(x_rand);
-    float angle = getDirection(ptrTable[idx]->location, x_rand) - ptrTable[idx]->alpha;
-    float step = MaxStep;
-
-    while((angle > max_alpha && angle < -max_alpha) && step > 0.0)
-    {
-        idx = ptrTable[idx]->idx_parent;
-        angle = getDirection(ptrTable[idx]->location, x_rand) - ptrTable[idx]->alpha;
-        step -= 1.0;
-    }
-
-    if(step > 0.0)
-    {
-        return idx;
-    }
-    return 0;
-    */
 
     // TODO : Compute the function f(MaxStep, L, MaxAlpha)
     float thetaMax = max_alpha;
@@ -439,7 +415,7 @@ int rrtTree::newState(double *out, point x_near, point x_rand, double MaxStep) {
     float xc, yc;
 
     // Generate, let's say, 20 new states
-    for(int i = 0; i < 20; i++)
+    for(int i = 0; i < 100; i++)
     {
         // Generate parameters
         float alpha = -max_alpha + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX/(max_alpha+max_alpha)));
@@ -515,6 +491,17 @@ bool rrtTree::isCollision(point x1, point x2, double d, double alpha) {
     //TODO
 
     // DEBUG
+    int i, j;
+
+    // This function can also be used to check if a point is valid
+    if(x1.x == x2.x && x1.y == x2.y)
+    {
+        i = ((int)floor(x1.x / res)) + map_origin_x;
+        j = ((int)floor(x1.y / res)) + map_origin_y;
+        //return (map.at<uchar>(i, j) == 0);
+        return (map.at<uchar>(i, j) != 255);
+        //return (map.at<uchar>(i, j) != 250);
+    }
 
     double x = x1.x, y = x1.y, dx = 0, dy = 0;
 
@@ -529,6 +516,7 @@ bool rrtTree::isCollision(point x1, point x2, double d, double alpha) {
 
         //if (map.at<uchar>(i2, j2) == 0)
         if (map.at<uchar>(i2, j2) != 255)
+        //if (map.at<uchar>(i2, j2) != 250)
         {
             //DEBUG
             //std::cout << "Collision !" << std::endl;
@@ -539,17 +527,8 @@ bool rrtTree::isCollision(point x1, point x2, double d, double alpha) {
     //return false;
 
 
-    int i, j, i2, j2;
+    int i2, j2;
     double Res = 2;
-
-    // This function can also be used to check if a point is valid
-    if(x1.x == x2.x && x1.y == x2.y)
-    {
-        i = ((int)floor(x1.x / res)) + map_origin_x;
-        j = ((int)floor(x1.y / res)) + map_origin_y;
-        //return (map.at<uchar>(i, j) == 0);
-        return (map.at<uchar>(i, j) != 255);
-    }
 
     double constPreventingWall = mapSize / 6.5;
     double x4X = x1.x + constPreventingWall*cos(x1.th), x4Y = x1.y + constPreventingWall*sin(x1.th);
@@ -599,6 +578,7 @@ bool rrtTree::isCollision(point x1, point x2, double d, double alpha) {
         // Check if the map is occupied or not
         //if(map.at<uchar>(i, j) == 0 || map.at<uchar>(i2, j2) == 0)
         if(map.at<uchar>(i, j) != 255 || map.at<uchar>(i2, j2) != 255)
+        //if(map.at<uchar>(i, j) != 250 || map.at<uchar>(i2, j2) != 250)
         {
             return true;
         }
@@ -621,70 +601,6 @@ int rrtTree::optimizeTree() {
     }
 
     return 1;
-
-    // int idx = count - 1;
-    // int numOfCands = 0;
-    //
-    // while(idx != NULL)
-    // {
-    //     ++numOfCands;
-    //     idx = ptrTable[idx]->idx_parent;
-    // }
-    // std::cout << "Count!::" << numOfCands << std::endl;
-    //
-    // int idxs[numOfCands] = {0,};
-    // int idx_cand = count - 1;
-    // int it = numOfCands - 1;
-    // while(idx_cand != NULL)
-    // {
-    //     int idx_parent_of_cand = ptrTable[idx_cand]->idx_parent;
-    //     idxs[it] = idx_parent_of_cand;
-    //     idx_cand = idx_parent_of_cand;
-    //     --it;
-    // }
-
-    // std::cout << "[Idxs]=[";
-    // for (int n=0; n<numOfCands; ++n) { std::cout << idxs[n] << ", "; }
-    // std::cout << "]" << std::endl;
-
-
-    // for (int n=0; n<numOfCands-1; ++n)
-    // {
-    //     std::cout << n << "th trial" << std::endl;
-        // double totDist = 0;
-        // double compDist = 0;
-        //
-        // int idx_cand = count - 1;
-        // int idx_parent_of_cand = 0;
-        // while(idx_cand != NULL) {
-        //     std::cout << idx_cand << std::endl;
-        //     idx_parent_of_cand = ptrTable[idx_cand]->idx_parent;
-        //     totDist += distance(ptrTable[idx_cand]->location, ptrTable[idx_parent_of_cand]->location);
-        //     idx_cand = idx_parent_of_cand;
-        // }
-        //
-        // idx_cand = count - 1;
-        // while(idx_cand != NULL) {
-        //     idx_parent_of_cand = ptrTable[idx_cand]->idx_parent;
-        //     if (idx_cand != idxs[n]) {
-        //         compDist += distance(ptrTable[idx_cand]->location, ptrTable[idx_parent_of_cand]->location);
-        //     }
-        //     idx_cand = idx_parent_of_cand;
-        // }
-        //
-        // std::cout << \
-        //     n << "th brute-force optimizing distance::" << totDist << ">>>"<< compDist;
-        //
-        // if (compDist < totDist) {
-        //     int valid = setParentOfVertex(idxs[n+1], idxs[n-1]);
-        //     if (valid) {
-        //         std::cout << " -> Skipped" << std::endl;
-        //     }
-        //     else {
-        //         std::cout << " -> Remained" << std::endl;
-        //     }
-        // }
-    // }
 }
 
 std::vector<traj> rrtTree::backtracking_traj(){
