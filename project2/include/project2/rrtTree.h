@@ -50,6 +50,7 @@ private:
     int nearestNeighbor(point x_rand);
     int nearestNeighbor2(point x_rand, double MaxStep);
     bool isCollision(point x1, point x2, double d, double alpha);
+    bool isCollision2(traj t1, traj t2);
     point randomState(double x_max, double x_min, double y_max, double y_min);
     int newState(double *out, point x_near, point x_rand, double MaxStep);
 
@@ -66,6 +67,7 @@ public:
     void visualizeTree(std::vector<traj> path);
     int generateRRT(double x_max, double x_min, double y_max, double y_min, int K, double MaxStep);
     std::vector<traj> backtracking_traj();
+    std::vector<traj> optimizePath(std::vector<traj> path);
 
     /* Custom */
     int optimizeTree();

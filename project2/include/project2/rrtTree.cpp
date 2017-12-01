@@ -198,6 +198,9 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
     int loop = 0;
     int goalReached = false;
 
+    // Use this one to know how much we crashed so far ( new State is not valid)
+    int crashes = 0;
+
     mapSize = fmin(x_max - x_min, y_max - y_min);
 
     // DEBUG
@@ -209,7 +212,17 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
     while(loop < K && !goalReached)
     {
         // DEBUG
-        //std::cout << "generateRRT >> Start loop" << std::endl;
+        // if(loop % 500 == 0)
+        // {
+        //     // Print it only sometimes
+        //     std::cout << "generateRRT : loop = " << loop << " & crashes = " << crashes << std::endl;
+        // }
+
+        // If we crash too much, we might be too close of a wall. We should restart the entire path
+        if(crashes > K * 10)
+        {
+            return -1;
+        }
 
         // First step : Generate a random point
         point randPoint = randomState(x_max, x_min, y_max, y_min);
@@ -232,6 +245,7 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
             // incrementing loop, because we want K vertex
             // DEBUG
             //std::cout << "generateRRT >> New state is not valid : continue" << std::endl;
+            crashes++;
             continue;
         }
 
@@ -661,8 +675,152 @@ std::vector<traj> rrtTree::backtracking_traj(){
 
     std::reverse(path.begin(), path.end());
 
-    // DEBUG
-    // visualizeTree(path);
-
     return path;
+}
+
+std::vector<traj> rrtTree::optimizePath(std::vector<traj> path)
+{
+    /* To optimize the path, we will try to get rid of useless nodes.
+    It is the case for example when the car can go straight (no obstacles)
+    but the path generated is turning around a bit.
+    */
+    // New vector of traj
+    std::vector<traj> optimized;
+
+    //DEBUG
+    // std::cout << "path = {";
+    // std::vector<traj>::iterator disp;
+    // for(disp = path.begin(); disp != path.end(); disp++)
+    // {
+    //     std::cout << "(" << disp->x << ";" << disp->y << ";" << disp->th << ")   ";
+    // }
+    // std::cout << "}" << std::endl;
+
+    // Check every point 
+    std::vector<traj>::iterator currentPoint;
+    std::vector<traj>::iterator previousPoint = path.begin();
+    std::vector<traj>::iterator pointToCompare;
+    std::vector<traj>::iterator nextOptimized;
+    for(currentPoint = path.begin(); currentPoint != path.end(); currentPoint++)
+    {
+        // Add it to our vector
+        optimized.push_back(*currentPoint);
+        nextOptimized = currentPoint;
+
+        // Optimize only if it's not the last point of the path
+        if(currentPoint != path.end() - 1)
+        {
+            // For every point, compare it with all the next point on the path
+            for(pointToCompare = currentPoint; pointToCompare != path.end(); pointToCompare++)
+            {
+                // If there is no collision between the points
+                if(!isCollision2(*currentPoint, *pointToCompare))
+                {
+                    double dif = currentPoint->th - pointToCompare->th;
+                    double oldDif = currentPoint->th - previousPoint->th;
+                    if(dif < (PI/20) && dif > -(PI/20) && oldDif < (PI/10) && oldDif > -(PI/10))
+                    {
+                        nextOptimized = pointToCompare;
+                    }
+                }
+            }
+        }       
+        
+        // If we can optimize, optimize
+        if(nextOptimized != currentPoint)
+        {
+            currentPoint = nextOptimized;
+            currentPoint--;
+        }
+        previousPoint = currentPoint;
+
+        //DEBUG
+        // std::cout << "path optimized = {";
+        // for(disp = optimized.begin(); disp != optimized.end(); disp++)
+        // {
+        //     std::cout << "(" << disp->x << ";" << disp->y << ";" << disp->th << ")   ";
+        // }
+        // std::cout << "}" << std::endl;
+
+        // std::cin.get();
+    }
+    return optimized;
+}
+
+bool rrtTree::isCollision2(traj t1, traj t2) {
+    // Convert to point
+    point x1, x2;
+    x1.x = t1.x;
+    x1.y = t1.y;
+    x1.th = t1.th;
+    x2.x = t2.x;
+    x2.y = t2.y;
+    x2.th = t2.th;
+
+    // DEBUG
+    int i, j;
+
+    // If it's the same point, return true
+    if(x1.x == x2.x && x1.y == x2.y)
+    {
+        return true;
+    }
+
+    double x = x1.x, y = x1.y, dx = 0, dy = 0;
+
+    dx = (x2.x - x) / 100;
+    dy = (x2.y - y) / 100;
+
+    for(int k=0; k<100; ++k) {
+        x += dx;
+        y += dy;
+        int i2 = ((int)floor(x / res)) + map_origin_x;
+        int j2 = ((int)floor(y / res)) + map_origin_y;
+
+        //if (map.at<uchar>(i2, j2) == 0)
+        if (map.at<uchar>(i2, j2) != 255)
+        //if (map.at<uchar>(i2, j2) != 250)
+        {
+            //DEBUG
+            //std::cout << "Collision !" << std::endl;
+            //std::cout << "Collision = " << (int)map.at<uchar>(i2, j2) << "(" << i2 << ";" << j2 << ")" << std::endl;
+            return true;
+        }
+    }
+    //return false;
+
+
+    int i2, j2;
+    double Res = 2;
+
+    double constPreventingWall = mapSize / 6.5;
+    double x4X = x1.x + constPreventingWall*cos(x1.th), x4Y = x1.y + constPreventingWall*sin(x1.th);
+    x = x1.x, y = x1.y, dx = 0, dy = 0;
+    dx = (x4X - x1.x) / 100;
+    dy = (x4Y - x1.y) / 100;
+
+    for(int k=0; k<100; ++k) {
+        x += dx;
+        y += dy;
+        int i2 = ((int)floor(x / res)) + map_origin_x;
+        int j2 = ((int)floor(y / res)) + map_origin_y;
+
+        if (map.at<uchar>(i2, j2) == 0) { return true; }
+    }
+
+    double x3X = x2.x + constPreventingWall*cos(x2.th), x3Y = x2.y + constPreventingWall*sin(x2.th);
+    x = x2.x, y = x2.y, dx = 0, dy = 0;
+    dx = (x3X - x2.x) / 100;
+    dy = (x3Y - x2.y) / 100;
+
+    for(int k=0; k<100; ++k) {
+        x += dx;
+        y += dy;
+        int i2 = ((int)floor(x / res)) + map_origin_x;
+        int j2 = ((int)floor(y / res)) + map_origin_y;
+
+        if (map.at<uchar>(i2, j2) == 0) { return true; }
+    }
+
+    return false;
 }
