@@ -209,14 +209,20 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
     //std::cin.get();
 
     //while(loop < K || !goalReached)
-    while(loop < K && !goalReached)
+    //while(loop < K && !goalReached)
+    while(loop < K && (!goalReached || loop < K))
     {
         // DEBUG
-        // if(loop % 500 == 0)
-        // {
-        //     // Print it only sometimes
-        //     std::cout << "generateRRT : loop = " << loop << " & crashes = " << crashes << std::endl;
-        // }
+        if(loop % 500 == 0 && loop != 0)
+        {
+            // Print it only sometimes
+            std::cout << "generateRRT : loop = " << loop << " & crashes = " << crashes << std::endl;
+        }
+        if(crashes % K == 0 && crashes != 0)
+        {
+            // Print it only sometimes
+            std::cout << "generateRRT : loop = " << loop << " & crashes = " << crashes << std::endl;
+        }
 
         // If we crash too much, we might be too close of a wall. We should restart the entire path
         if(crashes > K * 10)
@@ -309,7 +315,7 @@ point rrtTree::randomState(double x_max, double x_min, double y_max, double y_mi
     goalBias++;     // For goal Bias, to count how often we have to set it
 
     // Every 10 randomly generated points, we set the goal Bias
-    if(goalBias % 10 == 0)
+    if(goalBias % BIAS_FREQ == 0)
     {
         return x_goal;
     }

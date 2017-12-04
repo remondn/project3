@@ -20,6 +20,8 @@
 
 #include "project2/functions.h"
 
+#define BIAS_FREQ 3
+
 
 class rrtTree
 {

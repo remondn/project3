@@ -22,7 +22,6 @@
 #include <ctime>
 #include <algorithm>
 #include "project2/functions.h"
-
 #define MAX_SPEED 2.0
 
 //map spec
@@ -41,7 +40,8 @@ double world_y_max;
 // int margin = 5;
 // int K = 500;
 // double MaxStep = 2;
-int waypoint_margin = 23;
+//int waypoint_margin = 23;
+int waypoint_margin = 3;
 
 //parameters [FROM PROJECT 3]
 int margin = 3;
@@ -161,11 +161,14 @@ int main(int argc, char** argv){
             // Step 1 : Update the steering angle with PID algorithm
             double turn = pid_ctrl.get_control(robot_pose, prevGoal, *currentGoal);
             double speed = pid_ctrl.set_speed(1.0, MAX_SPEED, robot_pose, *currentGoal, turn);
+            // DEBUG
             std::cout << "Turn <" << turn << \
                 " (" << robot_pose.x << "," << robot_pose.y << ")>>(" << (*currentGoal).x << "," << (*currentGoal).y << ") " \
                 "with Speed " << speed << \
                 std::endl;
             setcmdvel(speed, turn);
+            // DEBUG
+            // setcmdvel(1.0, 60.0*3.14/180.0);
 
             // Step 2 : Publish the new data
             cmd_vel_pub.publish(cmd);
@@ -291,25 +294,6 @@ void set_waypoints()
     int randj;
     for(int p = 1; p < 4; p++)
     {
-        // DEBUG
-        // std::cout << "Generation of point " << p  << " in corner " << corner << std::endl;
-        // std::cout << "Corner = <" << iStart[corner] << ", " << iEnd[corner] << ">    <" << jStart[corner] << ", " << jEnd[corner] << ">" << std::endl;
-        // for(int a = iStart[corner]; a <= iEnd[corner]; a++)
-        // {
-        //     for(int b = jStart[corner]; b <= jEnd[corner]; b++)
-        //     {
-        //         if((int)map_margin.at<uchar>(a, b) == 255)
-        //         {
-        //             //std::cout << "White found" << std::endl;
-        //         }
-        //         else if((int)map_margin.at<uchar>(a, b) == 0)
-        //         {
-        //             std::cout << "Black found" << std::endl;
-        //         }
-        //     }
-        // }
-        // std::cin.get();
-
         // Generate randomly a valid point inside the corner
         do
         { 
@@ -328,6 +312,91 @@ void set_waypoints()
         // Update the corner for next point
         corner = (corner + 1) % 4;    // Turn clockwise
     }
+
+    // // We have 3 points to assign : 0 and 4 is already assigned (start & goal)
+    // // We need to assign them is the right corner
+    // corner = (corner + 1) % 4;    // Turn clockwise
+    // int besti, bestj;
+    // int centeri = iSize / 2;
+    // int centerj = jSize / 2;
+    // int randi, randj;
+    // double dist, bestDist;
+    // int resi = iSize / 20;
+    // int resj = jSize / 20;
+    // bool visitedHole;
+    // for(int p = 1; p < 4; p++)
+    // {
+    //     bestDist = 0;
+    //     // Find optimized waypoints : Start from the center of the map and find corners of obstacles
+    //     for(int curi = iStart[corner]; curi < iEnd[corner]; curi++)
+    //     {
+    //         visitedHole = false;
+    //         for(int curj = jStart[corner]; curj < jEnd[corner]; curj++)
+    //         {
+    //             if((int)map_margin.at<uchar>(curi, curj) != 255 && visitedHole == false)
+    //             {
+    //                 // Compute distance
+    //                 dist = sqrt(pow(curi - centeri, 2.0) + pow(curj - centerj, 2.0));
+    //                 if(dist > bestDist)
+    //                 {
+    //                     bestDist = dist;
+    //                     besti = curi;
+    //                     bestj = curj;
+    //                 }
+    //             }
+    //             else
+    //             {
+    //                 visitedHole = true;
+    //             }
+    //         }
+    //     }
+    //     // DEBUG
+    //     if(bestDist == 0)
+    //     {
+    //         std::cout << "MISTAKEN" << std::endl;
+    //         return;
+    //     }
+
+    //     // We found the corner of the obstacle which is the most far from the center. Now take the closest empty space, diagonally
+    //     randi = besti;
+    //     randj = bestj;
+    //     while((int)map_margin.at<uchar>(randi, randj) != 255)
+    //     {
+    //         // Update the waypoints depend on the corner we are
+    //         // j
+    //         if(corner == 0 || corner == 1)
+    //         {
+    //             randj += resj;
+    //         }
+    //         else
+    //         {
+    //             randj -= resj;
+    //         }
+    //         //i
+    //         if(corner == 1 || corner == 2)
+    //         {
+    //             randi += resi;
+    //         }
+    //         else
+    //         {
+    //             randi -= resi;
+    //         }
+
+    //         // DEBUG
+    //         if(randi >= iSize || randj >= jSize)
+    //         {
+    //             std::cout << "PAS DE TROU" << std::endl;
+    //             return;
+    //         }
+    //     }
+
+    //     // Once we have a valid point, save it
+    //     waypoint_candid[p].x = res * (randi - map_origin_x);
+    //     waypoint_candid[p].y = res * (randj - map_origin_y);
+
+    //     // Update the corner for next point
+    //     corner = (corner + 1) % 4;    // Turn clockwise
+    // }
 
     // DEBUG
     // std::cout << "Points generated = " << std::endl;
@@ -348,10 +417,10 @@ void set_waypoints()
         waypoints.push_back(waypoint_candid[order[i]]);
     }
 
-    // Second turn (Do not add the start point, because it's the same as the last goal point)
-    for(int i = 1; i < order_size; i++){
-        waypoints.push_back(waypoint_candid[order[i]]);
-    }
+    // // Second turn (Do not add the start point, because it's the same as the last goal point)
+    // for(int i = 1; i < order_size; i++){
+    //     waypoints.push_back(waypoint_candid[order[i]]);
+    // }
 }
 
 void generate_path_RRT()
@@ -402,8 +471,8 @@ void generate_path_RRT()
             pathI = t.optimizePath(pathI);
     
             //DEBUG
-            // t.visualizeTree(pathI);
-            // std::cin.get();
+            //t.visualizeTree(pathI);
+            //std::cin.get();
             // t.optimizeTree();
     
             // Add it to the total path
@@ -418,6 +487,17 @@ void generate_path_RRT()
             lastPoint.x = path_RRT.back().x;
             lastPoint.y = path_RRT.back().y;
             lastPoint.th = path_RRT.back().th;
+        }
+
+        // Copy the path a second time for 2 turn
+        path_RRT.insert(path_RRT.end(), path_RRT.begin(), path_RRT.end());
+
+        // Test if a full path is produced
+        if(path_RRT.size() <= 20 && !crash)
+        {
+            // Not enough point generated, try again
+            std::cout << "Crashed : " << path_RRT.size() << std::endl;
+            crash = true;
         }
     }
     return;
