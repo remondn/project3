@@ -34,7 +34,7 @@ class OdometryNode:
         self.v = 0.0
 
         # Set the update rate
-        rospy.Timer(rospy.Duration(.005), self.timer_callback)  # 20hz
+        rospy.Timer(rospy.Duration(.05), self.timer_callback)  # 20hz
 
         self.tf_pub = tf2_ros.TransformBroadcaster()
 

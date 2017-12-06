@@ -200,6 +200,7 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
 
     // Use this one to know how much we crashed so far ( new State is not valid)
     int crashes = 0;
+    int cc = 0;
 
     mapSize = fmin(x_max - x_min, y_max - y_min);
 
@@ -213,22 +214,30 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
     while(loop < K && (!goalReached || loop < K))
     {
         // DEBUG
-        if(loop % 500 == 0 && loop != 0)
-        {
-            // Print it only sometimes
-            std::cout << "generateRRT : loop = " << loop << " & crashes = " << crashes << std::endl;
-        }
-        if(crashes % K == 0 && crashes != 0)
-        {
-            // Print it only sometimes
-            std::cout << "generateRRT : loop = " << loop << " & crashes = " << crashes << std::endl;
-        }
+        // if(loop % 500 == 0 && loop != 0)
+        // {
+        //     // Print it only sometimes
+        //     std::cout << "generateRRT : loop = " << loop << " & crashes = " << crashes << std::endl;
+        // }
+        // if(crashes % K == 0 && crashes != 0)
+        // {
+        //     // Print it only sometimes
+        //     std::cout << "generateRRT : loop = " << loop << " & crashes = " << crashes << std::endl;
+        // }
 
         // If we crash too much, we might be too close of a wall. We should restart the entire path
         if(crashes > K * 10)
         {
             return -1;
         }
+        
+        cc++;
+        if(cc % K == 0)
+        {
+            std::cout << std::endl << "generateRRT : loop = " << loop << " & crashes = " << crashes << std::endl;
+        }
+        //std::cout << ".";
+        
 
         // First step : Generate a random point
         point randPoint = randomState(x_max, x_min, y_max, y_min);
@@ -286,6 +295,9 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
                 }
             }
         }
+
+        // DEBUG
+        //std::cout << "generateRRT >> End of loop" << std::endl;
 
         loop++;
 
@@ -525,10 +537,10 @@ bool rrtTree::isCollision(point x1, point x2, double d, double alpha) {
 
     double x = x1.x, y = x1.y, dx = 0, dy = 0;
 
-    dx = (x2.x - x) / 100;
-    dy = (x2.y - y) / 100;
+    dx = (x2.x - x) / 20;
+    dy = (x2.y - y) / 20;
 
-    for(int k=0; k<100; ++k) {
+    for(int k=0; k<20; ++k) {
         x += dx;
         y += dy;
         int i2 = ((int)floor(x / res)) + map_origin_x;

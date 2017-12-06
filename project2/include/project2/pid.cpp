@@ -117,8 +117,11 @@ float PID::get_control(point car_pose, traj prev_goal, traj cur_goal) {
 
 double PID::set_speed(double min_speed, double max_speed, point car_pose, traj cur_goal, double rad_to_turn)
 {
-    double dist = sqrt(pow(car_pose.x - cur_goal.x, 2.0) + pow(car_pose.y - cur_goal.y, 2.0));
+    // Go fast when we go straight
+    //return fmin(max_speed, (max_speed / fabs(rad_to_turn * 10)) / fabs(cur_goal.th));
 
+
+    double dist = sqrt(pow(car_pose.x - cur_goal.x, 2.0) + pow(car_pose.y - cur_goal.y, 2.0));
     return fmin(min_speed + dist/(1 + 8*fabs(rad_to_turn)), max_speed);
 }
 
