@@ -205,9 +205,9 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
     mapSize = fmin(x_max - x_min, y_max - y_min);
 
     // DEBUG
-    //visualizeTree();
-    //std::cout << "Pause : First print of the tree with only root" << std::endl;
-    //std::cin.get();
+    // visualizeTree();
+    // std::cout << "Pause : First print of the tree with only root" << std::endl;
+    // std::cin.get();
 
     //while(loop < K || !goalReached)
     //while(loop < K && !goalReached)
@@ -234,22 +234,24 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
         cc++;
         if(cc % K == 0)
         {
-            std::cout << std::endl << "generateRRT : loop = " << loop << " & crashes = " << crashes << std::endl;
+            // std::cout << std::endl << "generateRRT : loop = " << loop << " & crashes = " << crashes << std::endl;
         }
-        //std::cout << ".";
+        // std::cout << ".";
         
+        // DEBUG
+        // std::cout << "Map coord = " << x_max << " | " << x_min << " | " << y_max << " | " << y_min << std::endl;
 
         // First step : Generate a random point
         point randPoint = randomState(x_max, x_min, y_max, y_min);
 
         // DEBUG
-        //std::cout << "generateRRT >> Random state generated" << std::endl;
+        // std::cout << "generateRRT >> Random state generated" << std::endl;
 
         // Get the nearest neighbor
         int nearIndex = nearestNeighbor2(randPoint, MaxStep);
 
         // DEBUG
-        //std::cout << "generateRRT >> Nearest neighbor got" << std::endl;
+        // std::cout << "generateRRT >> Nearest neighbor got" << std::endl;
 
         // Create a new state
         double out[5];
@@ -259,13 +261,13 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
             // So forget about this state, and start a new one, without
             // incrementing loop, because we want K vertex
             // DEBUG
-            //std::cout << "generateRRT >> New state is not valid : continue" << std::endl;
+            // std::cout << "generateRRT >> New state is not valid : continue" << std::endl;
             crashes++;
             continue;
         }
 
         // DEBUG
-        //std::cout << "Index nearest :" << nearIndex << std::endl;
+        // std::cout << "Index nearest :" << nearIndex << std::endl;
 
         // The new state is valid ! Create a vertex
         point *newPoint = new point();
@@ -278,7 +280,7 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
         //visualize(*newPoint);
 
         // DEBUG
-        //std::cout << "generateRRT >> Vertex added" << std::endl;
+        // std::cout << "generateRRT >> Vertex added" << std::endl;
 
         // Check if we reached the goal
         if(!goalReached)
@@ -290,14 +292,14 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
                 if(distance(ptrTable[i]->location, x_goal) < 0.1)
                 {
                     // DEBUG
-                    //std::cout << "generateRRT >> Goal reached" << std::endl;
+                    // std::cout << "generateRRT >> Goal reached" << std::endl;
                     goalReached = true;
                 }
             }
         }
 
         // DEBUG
-        //std::cout << "generateRRT >> End of loop" << std::endl;
+        // std::cout << "generateRRT >> End of loop" << std::endl;
 
         loop++;
 
@@ -344,7 +346,7 @@ point rrtTree::randomState(double x_max, double x_min, double y_max, double y_mi
         randomPoint.th = 0.0;    // shouldn't be used, but we initialise it still.
 
         //DEBUG
-        //std::cout << "infinite loop ?" << std::endl;
+        // std::cout << "infinite loop ?" << std::endl;
     }while(isCollision(randomPoint, randomPoint, 0.0, 1.0));
     // Keep generating until we got a valid point
     // We don't care of alpha and d since start and endpoint are the same
