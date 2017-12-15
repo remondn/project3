@@ -19,8 +19,8 @@ PID::PID(){
     wg = 1.0;
     wd = 0.0;
     Kp = 1.0;
-    Ki = 0;
-    Kd = 0;
+    Ki = 0.0;
+    Kd = 0.0;
     iWasNegative = false;
 }
 
@@ -52,7 +52,7 @@ float PID::get_control(point car_pose, traj prev_goal, traj cur_goal) {
     goal.th = cur_goal.th;
     float preciseDirection = getDirection(car_pose, goal);
 
-    std::cout << "car_pose.th=" << car_pose.th << ", actually " << preciseDirection << std::endl;
+    // std::cout << "car_pose.th=" << car_pose.th << ", actually " << preciseDirection << std::endl;
 
     // Compute e(t) from the point of the car and the goal point
     // this->setWeight(car_pose, goal);
@@ -118,7 +118,14 @@ float PID::get_control(point car_pose, traj prev_goal, traj cur_goal) {
 double PID::set_speed(double min_speed, double max_speed, point car_pose, traj cur_goal, double rad_to_turn)
 {
     // Go fast when we go straight
-    //return fmin(max_speed, (max_speed / fabs(rad_to_turn * 10)) / fabs(cur_goal.th));
+    //return fmin(max_speed, (max_speed / fabs(rad_to_turn * 10)) / (fmax(dist, 0.5) * fabs(cur_goal.th)));
+    // double dist = sqrt(pow(car_pose.x - cur_goal.x, 2.0) + pow(car_pose.y - cur_goal.y, 2.0));
+    // double sp = min_speed + dist/(1 + 8*fabs(rad_to_turn));
+    // if(fabs(rad_to_turn) < 0.1)
+    // {
+    //     sp *= 2;
+    // }
+    // return fmin(sp, max_speed);
 
 
     double dist = sqrt(pow(car_pose.x - cur_goal.x, 2.0) + pow(car_pose.y - cur_goal.y, 2.0));

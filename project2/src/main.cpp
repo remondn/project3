@@ -37,9 +37,9 @@ double world_y_min;
 double world_y_max;
 
 //parameters you should adjust : K, margin, MaxStep
-int margin = 15;
-int K = 1500;
-double MaxStep = 4;
+int margin = 4;
+int K = 15000;
+double MaxStep = 2;
 
 //way points
 std::vector<point> waypoints;
@@ -321,81 +321,183 @@ int main(int argc, char** argv){
 
 void generate_path_RRT()
 {
-    /*
-     * 1. for loop
-     * 2.  call RRT generate function in order to make a path which connects i way point to i+1 way point.
-     * 3.  store path to variable "path_RRT"
-     * 4.  when you store path, you have to reverse the order of points in the generated path since BACKTRACKING makes a path in a reverse order (goal -> start).
-     * 5. end
-     */
-     // Iterate through all way point
-     std::vector<point>::iterator it = waypoints.begin();
-     point lastPoint = *it;
+    //DEBUG
+    std::vector<traj> pathMem[7];
+    rrtTree treeMem[7];
+    int pathNb = 0;
 
-     for(it = waypoints.begin() + 1; it != waypoints.end(); it++)
-     {
-         // Create the tree for the current waypoint
-         rrtTree t = rrtTree(lastPoint, *it, map, map_origin_x, map_origin_y, res, margin);
+    // Generate a new map for the first turn : close the center so we are sure we are turning
+    cv::Mat mapTurn = map.clone();
+    int jSize = map.cols; // the number of columns
+    int iSize = map.rows; // the number of rows
+    int jMarginBorder = (jSize / 10) * 2;
+    int iMarginBorder = (iSize / 10) * 2;
+    int jMarginBorder2 = (jSize / 10) * 3;
+    int iMarginBorder2 = (iSize / 10) * 3;
 
-         // Generate the RRT Tree
-         int isRRTValid = t.generateRRT(world_x_max, world_x_min, world_y_max, world_y_min, K, MaxStep);
-
-         if (isRRTValid) { std::cout << "[Err] RRT path is not valid." << std::endl; }
-
-         //DEBUG
-        //  t.visualizeTree(pathI);
-        //  std::cin.get();
-         t.optimizeTree();
-
-         // Get the backtracking path
-         std::vector<traj> pathI = t.backtracking_traj();
-
-         // Add it to the total path
-         path_RRT.insert(path_RRT.end(), pathI.begin(), pathI.end());
-
-         // Update for the next loop
-         lastPoint.x = path_RRT.back().x;
-         lastPoint.y = path_RRT.back().y;
-         lastPoint.th = path_RRT.back().th;
-     }
-     /*
-     * Old codes
-    // Iterate through all way point
-    std::vector<point>::iterator it;
-    std::vector<point>::iterator prev = waypoints.begin();
-
-    for(it = waypoints.begin() + 1; it != waypoints.end(); it++)
-    {
-        // DEBUG
-    std::cout << "Start loop" << std::endl;
-        // Create the tree for the current waypoint
-        rrtTree t = rrtTree(*prev, *it, map, map_origin_x, map_origin_y, res, margin);
-        // DEBUG
-    std::cout << "rrtTree created" << std::endl;
-
-        // Generate the RRT Tree
-        t.generateRRT(world_x_max, world_x_min, world_y_max, world_y_min, K, MaxStep);
-        // DEBUG
-    std::cout << "rrt generated" << std::endl;
-
-        // Get the backtracking path
-        std::vector<traj> pathI = t.backtracking_traj();
-        // DEBUG
-    std::cout << "Backtracking" << std::endl;
-
-        // Reverse the path, since it's not the write way
-        // std::reverse(pathI.begin(), pathI.end());
-        // DEBUG
-    std::cout << "reversed" << std::endl;
-
-        // Add it to the total path
-        path_RRT.insert(path_RRT.end(), pathI.begin(), pathI.end());
-        // DEBUG
-    std::cout << "Inserted" << std::endl;
-
-        prev++;
+    for (int i = 0; i < iSize; i++) {
+        for (int j = 0; j < jSize; j++) {
+            if(i > iMarginBorder && i < (iSize - iMarginBorder) && j > jMarginBorder && j < (jSize - jMarginBorder))
+            {
+                if(i > iMarginBorder2 && i < (iSize - iMarginBorder2))
+                {
+                    // If we are at the center, color it black
+                    mapTurn.at<uchar>(i, j) = 0;
+                }
+                if(j > jMarginBorder2 && j < (jSize - jMarginBorder2))
+                {
+                    // If we are at the center, color it black
+                    mapTurn.at<uchar>(i, j) = 0;
+                }
+            }
+        }
     }
-    */
+
+    bool crash = true;
+    while(crash)
+    {
+        crash = false;
+        path_RRT.clear();
+
+        // Iterate through all way point
+        std::vector<point>::iterator it = waypoints.begin();
+        point lastPoint = *it;
+        point previousLastPoint = lastPoint;
+        int c = 1;
+        pathNb = 0;
+
+        for(it = waypoints.begin() + 1; it != waypoints.end(); it++)
+        {
+            int isRRTValid;
+            rrtTree t;
+            // DEBUG
+            // std::cout << "Generation of path for waypoint " << c << "->" << c+1 << std::endl;
+
+            // Create the tree for the current waypoint
+            // t = rrtTree(lastPoint, *it, map, map_origin_x, map_origin_y, res, margin);
+            if(pathNb < 5)
+            {
+                // If it's the first turn, use the hand-colored map
+                t = rrtTree(lastPoint, *it, mapTurn, map_origin_x, map_origin_y, res, margin);
+            }
+            else
+            {
+                t = rrtTree(lastPoint, *it, map, map_origin_x, map_origin_y, res, margin);
+            }
+
+            // DEBUG
+            treeMem[pathNb] = t;
+        
+            // Generate the RRT Tree
+            isRRTValid = t.generateRRT(world_x_max, world_x_min, world_y_max, world_y_min, K, MaxStep);
+            c++;
+
+            if(isRRTValid == -1)
+            {
+                // DEBUG
+                std::cout << "Crashed" << std::endl;
+
+                crash = true;
+                break;
+            }
+        
+            // Get the backtracking path
+            std::vector<traj> pathI = t.backtracking_traj();
+
+            //DEBUG
+            //t.visualizeTree(pathI);
+            //std::cin.get();
+            // t.optimizeTree();
+
+            // DEBUG
+            pathMem[pathNb] = pathI;
+    
+            // Optimize it (straight line)
+            t.optimizeTree();
+            pathI = t.optimizePath(pathI);
+    
+            // Add it to the total path
+            path_RRT.insert(path_RRT.end(), pathI.begin(), pathI.end());
+    
+            //DEBUG
+            //t.visualizeTree(path_RRT);
+            //std::cin.get();
+    
+            // Update for the next loop
+            previousLastPoint = lastPoint;
+            lastPoint.x = path_RRT.back().x;
+            lastPoint.y = path_RRT.back().y;
+            lastPoint.th = path_RRT.back().th;
+            pathNb++;
+        }
+
+        // Copy the path a second time for 2 turn
+        //path_RRT.insert(path_RRT.end(), path_RRT.begin(), path_RRT.end());
+
+        // Test if a full path is produced
+        if(path_RRT.size() <= 20 && !crash)
+        {
+            // Not enough point generated, try again
+            std::cout << "Crashed : " << path_RRT.size() << std::endl;
+            crash = true;
+        }
+        // if(crash)
+        // {
+        //     set_waypoints();
+        // }
+    }
+    //return;
+
+    // DEBUG
+    std::cout << "Display of complete final path step by step.. " << std::endl;
+    for(int i = 0; i < pathNb; i++)
+    {
+        std::cout << "Step " << i << " : " << std::endl;
+        treeMem[i].visualizeTree(pathMem[i]);
+        std::cin.get();
+    }
+
+    return;
+
+
+    // /*
+    //  * 1. for loop
+    //  * 2.  call RRT generate function in order to make a path which connects i way point to i+1 way point.
+    //  * 3.  store path to variable "path_RRT"
+    //  * 4.  when you store path, you have to reverse the order of points in the generated path since BACKTRACKING makes a path in a reverse order (goal -> start).
+    //  * 5. end
+    //  */
+    //  // Iterate through all way point
+    //  std::vector<point>::iterator it = waypoints.begin();
+    //  point lastPoint = *it;
+
+    //  for(it = waypoints.begin() + 1; it != waypoints.end(); it++)
+    //  {
+    //      // Create the tree for the current waypoint
+    //      rrtTree t = rrtTree(lastPoint, *it, map, map_origin_x, map_origin_y, res, margin);
+
+    //      // Generate the RRT Tree
+    //      int isRRTValid = t.generateRRT(world_x_max, world_x_min, world_y_max, world_y_min, K, MaxStep);
+
+    //      if (isRRTValid) { std::cout << "[Err] RRT path is not valid." << std::endl; }
+
+    //      //DEBUG
+    //     //  t.visualizeTree(pathI);
+    //     //  std::cin.get();
+    //      t.optimizeTree();
+
+    //      // Get the backtracking path
+    //      std::vector<traj> pathI = t.backtracking_traj();
+
+    //      // Add it to the total path
+    //      path_RRT.insert(path_RRT.end(), pathI.begin(), pathI.end());
+
+    //      // Update for the next loop
+    //      lastPoint.x = path_RRT.back().x;
+    //      lastPoint.y = path_RRT.back().y;
+    //      lastPoint.th = path_RRT.back().th;
+    //  }
+   
 }
 
 void set_waypoints()

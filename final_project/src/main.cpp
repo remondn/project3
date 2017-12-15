@@ -156,14 +156,14 @@ int main(int argc, char** argv){
 
             // Step 1 : Update the steering angle with PID algorithm
             double turn = pid_ctrl.get_control(robot_pose, prevGoal, *currentGoal);
-            double speed = pid_ctrl.set_speed(0.75, MAX_SPEED, robot_pose, *currentGoal, turn);
-            //double speed = pid_ctrl.set_speed(0.45, MAX_SPEED, robot_pose, *currentGoal, turn);
+            //double speed = pid_ctrl.set_speed(0.75, MAX_SPEED, robot_pose, *currentGoal, turn);
+            double speed = pid_ctrl.set_speed(1.0, MAX_SPEED, robot_pose, *currentGoal, turn);
 
             // DEBUG
-            std::cout << "Turn <" << turn << \
-                " (" << robot_pose.x << "," << robot_pose.y << ")>>(" << (*currentGoal).x << "," << (*currentGoal).y << ") " \
-                "with Speed " << speed << \
-                std::endl;
+            // std::cout << "Turn <" << turn << \
+            //     " (" << robot_pose.x << "," << robot_pose.y << ")>>(" << (*currentGoal).x << "," << (*currentGoal).y << ") " \
+            //     "with Speed " << speed << \
+            //     std::endl;
             setcmdvel(speed, turn);
             // DEBUG
             // setcmdvel(1.0, 60.0*3.14/180.0);
@@ -177,12 +177,12 @@ int main(int argc, char** argv){
             goal.y = currentGoal->y;
             goal.th = currentGoal->th;
 
-            if(distance(robot_pose, goal) < 0.2)
+            if(distance(robot_pose, goal) < 0.4)
             {
                 //DEBUG
-                std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-                std::cout << "Point Reached !" << std::endl;
-                std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+                // std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+                // std::cout << "Point Reached !" << std::endl;
+                // std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 
                 // If the distance is lower than 0.2 meters, then we change the goal
                 pid_ctrl.initErrorSum();
@@ -255,7 +255,7 @@ void set_waypoints()
     // waypoint_candid[4].y = 8.5;
 
     // Set the margin off the extern wall
-    double marginFromBorderX = -(world_x_min - waypoint_candid[0].x) + 0.0;
+    double marginFromBorderX = -(world_x_min - waypoint_candid[0].x) - 0.3;
     double marginFromBorderY = (world_y_max - waypoint_candid[0].y) - 0.4;
     // Set the middle of map for both x and y
     double midX = world_x_min + ((world_x_max - world_x_min) / 2);
@@ -316,13 +316,23 @@ void generate_path_RRT()
     int iSize = map.rows; // the number of rows
     int jMarginBorder = (jSize / 10) * 2;
     int iMarginBorder = (iSize / 10) * 2;
+    int jMarginBorder2 = (jSize / 10) * 3;
+    int iMarginBorder2 = (iSize / 10) * 3;
 
     for (int i = 0; i < iSize; i++) {
         for (int j = 0; j < jSize; j++) {
             if(i > iMarginBorder && i < (iSize - iMarginBorder) && j > jMarginBorder && j < (jSize - jMarginBorder))
             {
-                // If we are at the center, color it black
-                mapTurn.at<uchar>(i, j) = 0;
+                if(i > iMarginBorder2 && i < (iSize - iMarginBorder2))
+                {
+                    // If we are at the center, color it black
+                    mapTurn.at<uchar>(i, j) = 0;
+                }
+                if(j > jMarginBorder2 && j < (jSize - jMarginBorder2))
+                {
+                    // If we are at the center, color it black
+                    mapTurn.at<uchar>(i, j) = 0;
+                }
             }
         }
     }
@@ -342,34 +352,50 @@ void generate_path_RRT()
 
         for(it = waypoints.begin() + 1; it != waypoints.end(); it++)
         {
-            int isRRTValid;
+            int isRRTValid = 0;
             rrtTree t;
             // DEBUG
             // std::cout << "Generation of path for waypoint " << c << "->" << c+1 << std::endl;
+            std::cout << "Please wait..." << std::endl;
 
-            // Create the tree for the current waypoint
-            // t = rrtTree(lastPoint, *it, map, map_origin_x, map_origin_y, res, margin);
             if(pathNb < 5)
             {
                 // If it's the first turn, use the hand-colored map
                 t = rrtTree(lastPoint, *it, mapTurn, map_origin_x, map_origin_y, res, margin);
+
+                // DEBUG
+                treeMem[pathNb] = t;
+            
+                // Generate the RRT Tree
+                isRRTValid = t.generateRRT(world_x_max, world_x_min, world_y_max, world_y_min, K, MaxStep);
             }
             else
             {
-                t = rrtTree(lastPoint, *it, map, map_origin_x, map_origin_y, res, margin);
+                while(isRRTValid == 0)
+                {
+                    // DEBUG
+                    // std::cout << "Please wait..." << std::endl;
+                    
+                    t = rrtTree(lastPoint, *it, map, map_origin_x, map_origin_y, res, margin);
+        
+                    // DEBUG
+                    treeMem[pathNb] = t;
+                
+                    // Generate the RRT Tree
+                    isRRTValid = t.generateRRT(world_x_max, world_x_min, world_y_max, world_y_min, K, MaxStep);
+                }
             }
 
-            // DEBUG
-            treeMem[pathNb] = t;
-        
-            // Generate the RRT Tree
-            isRRTValid = t.generateRRT(world_x_max, world_x_min, world_y_max, world_y_min, K, MaxStep);
+            // Create the tree for the current waypoint
+            // t = rrtTree(lastPoint, *it, map, map_origin_x, map_origin_y, res, margin);
+            
+            
             c++;
 
             if(isRRTValid == -1)
             {
                 // DEBUG
-                std::cout << "Crashed" << std::endl;
+                std::cout << "Please wait more..." << std::endl;
 
                 crash = true;
                 break;
@@ -387,6 +413,7 @@ void generate_path_RRT()
             pathMem[pathNb] = pathI;
     
             // Optimize it (straight line)
+            t.optimizeTree();
             pathI = t.optimizePath(pathI);
     
             // Add it to the total path

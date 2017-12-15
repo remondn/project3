@@ -208,6 +208,7 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
     // visualizeTree();
     // std::cout << "Pause : First print of the tree with only root" << std::endl;
     // std::cin.get();
+    //std::cout << "GOAL = [" << x_goal.x << " ; " << x_goal.y << std::endl;
 
     //while(loop < K || !goalReached)
     //while(loop < K && !goalReached)
@@ -289,10 +290,10 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
             {
                 // If the goal is 10cm away from one of the point of the tree,
                 // it's fine, we accept
-                if(distance(ptrTable[i]->location, x_goal) < 0.1)
+                if(distance(ptrTable[i]->location, x_goal) < 0.2)
                 {
                     // DEBUG
-                    // std::cout << "generateRRT >> Goal reached" << std::endl;
+                    // std::cout << "generateRRT >> Goal reached. i = " << i << std::endl;
                     goalReached = true;
                 }
             }
@@ -645,12 +646,21 @@ std::vector<traj> rrtTree::backtracking_traj(){
     int bestI = 0;
     for(int i = 0; i < count; i++)
     {
-        if(distance(ptrTable[i]->location, x_goal) < bestDistance)
+        if(distance(ptrTable[i]->location, x_goal) <= bestDistance)
         {
             bestDistance = distance(ptrTable[i]->location, x_goal);
             bestI = i;
         }
     }
+
+    //DEBUG
+    // std::cout << "NEAREST : " << ptrTable[bestI]->location.x << " ; " << ptrTable[bestI]->location.y << " and i = " << bestI << std::endl;
+    // std::cout << "dist : " << distance(ptrTable[bestI]->location, x_goal) << std::endl;
+
+    //ptrTable[bestI]->location.x = x_goal.x;
+    //ptrTable[bestI]->location.y = x_goal.y;
+
+
 
     // Then, track parents one by one and add them to the traj
     std::vector<traj> path;
