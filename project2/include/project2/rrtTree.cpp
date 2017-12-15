@@ -290,7 +290,7 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
             {
                 // If the goal is 10cm away from one of the point of the tree,
                 // it's fine, we accept
-                if(distance(ptrTable[i]->location, x_goal) < 0.2)
+                if(distance(ptrTable[i]->location, x_goal) < 0.4)
                 {
                     // DEBUG
                     // std::cout << "generateRRT >> Goal reached. i = " << i << std::endl;

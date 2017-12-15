@@ -356,10 +356,13 @@ void generate_path_RRT()
             rrtTree t;
             // DEBUG
             // std::cout << "Generation of path for waypoint " << c << "->" << c+1 << std::endl;
-            std::cout << "Please wait..." << std::endl;
+            //std::cout << "Please wait..." << std::endl;
 
             if(pathNb < 5)
             {
+                // DEBUG
+                std::cout << "Generation of first turn" << std::endl;
+
                 // If it's the first turn, use the hand-colored map
                 t = rrtTree(lastPoint, *it, mapTurn, map_origin_x, map_origin_y, res, margin);
 
@@ -374,7 +377,7 @@ void generate_path_RRT()
                 while(isRRTValid == 0)
                 {
                     // DEBUG
-                    // std::cout << "Please wait..." << std::endl;
+                    std::cout << "Specific goal point generation" << std::endl;
                     
                     t = rrtTree(lastPoint, *it, map, map_origin_x, map_origin_y, res, margin);
         
@@ -395,7 +398,7 @@ void generate_path_RRT()
             if(isRRTValid == -1)
             {
                 // DEBUG
-                std::cout << "Please wait more..." << std::endl;
+                std::cout << "Restarting all generation" << std::endl;
 
                 crash = true;
                 break;
